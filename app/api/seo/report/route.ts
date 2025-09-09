@@ -9,6 +9,8 @@ import { crawlPage, getSitemap } from '@/lib/providers/crawl';
 import { transformTechnicalSEO, transformOnPageSEO, transformSERPAnalysis } from '@/lib/seo/transform';
 import { generateKeywordOpportunities, generateGrowthPlan } from '@/lib/seo/recommend';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
