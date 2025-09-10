@@ -15,6 +15,18 @@ export interface DomainOverview {
   domainRank: number | null;
   indexedPages: number | null;
   organicKeywords: number | null;
+  gscData?: {
+    totalClicks: number;
+    totalImpressions: number;
+    averageCTR: number;
+    averagePosition: number;
+    topKeywords: Array<{
+      query: string;
+      clicks: number;
+      impressions: number;
+      position: number;
+    }>;
+  };
   internationalization: {
     hreflang: string[];
     domains: string[];

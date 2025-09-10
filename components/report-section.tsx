@@ -40,6 +40,18 @@ export default function ReportSection({ report }: ReportSectionProps) {
 
       {/* Overview Cards */}
       <div className="grid md:grid-cols-4 gap-4 mb-8">
+        {report.overview.gscData && (
+          <Card>
+            <CardContent className="p-4 text-center">
+              <Search className="h-8 w-8 text-green-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-gray-900">
+                {report.overview.gscData.totalClicks.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-600">GSC Clicks (90d)</div>
+            </CardContent>
+          </Card>
+        )}
+        
         <Card>
           <CardContent className="p-4 text-center">
             <Globe className="h-8 w-8 text-blue-500 mx-auto mb-2" />
@@ -80,6 +92,64 @@ export default function ReportSection({ report }: ReportSectionProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* GSC Data Section */}
+      {report.overview.gscData && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-green-500" />
+              Google Search Console Data (Last 90 Days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-4 gap-4 mb-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {report.overview.gscData.totalClicks.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">Total Clicks</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {report.overview.gscData.totalImpressions.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-600">Total Impressions</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {report.overview.gscData.averageCTR.toFixed(2)}%
+                </div>
+                <div className="text-sm text-gray-600">Average CTR</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">
+                  {report.overview.gscData.averagePosition.toFixed(1)}
+                </div>
+                <div className="text-sm text-gray-600">Average Position</div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Top Performing Keywords</h4>
+              <div className="space-y-2">
+                {report.overview.gscData.topKeywords.slice(0, 10).map((keyword, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <span className="font-medium">{keyword.query}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-green-600">{keyword.clicks} clicks</span>
+                      <span className="text-blue-600">{keyword.impressions.toLocaleString()} imp.</span>
+                      <Badge variant="outline">#{keyword.position.toFixed(1)}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Detailed Report Sections */}
       <Accordion type="multiple" defaultValue={["technical", "onpage"]} className="space-y-4">

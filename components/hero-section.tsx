@@ -5,32 +5,59 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import { Search, Globe, Target, Zap } from 'lucide-react';
+import { Search, Globe, Target, Zap, Link } from 'lucide-react';
 
 interface HeroSectionProps {
-  onGenerateReport: (data: { domain?: string; keyword?: string; type: 'domain' | 'keyword' }) => void;
+  onGenerateReport: (data: { domain?: string; keyword?: string; type: 'domain' | 'keyword'; gscToken?: string }) => void;
   isLoading: boolean;
 }
 
 export default function HeroSection({ onGenerateReport, isLoading }: HeroSectionProps) {
   const [activeTab, setActiveTab] = useState<'domain' | 'keyword'>('domain');
   const [inputValue, setInputValue] = useState('');
+  const [gscToken, setGscToken] = useState<string>('');
+  const [showGSCConnect, setShowGSCConnect] = useState(false);
+
+  // Check for GSC token in URL params (after OAuth callback)
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('gsc_token');
+      if (token) {
+        setGscToken(token);
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
     if (activeTab === 'domain') {
-      onGenerateReport({ domain: inputValue.trim(), type: 'domain' });
+      onGenerateReport({ domain: inputValue.trim(), type: 'domain', gscToken: gscToken || undefined });
     } else {
-      onGenerateReport({ keyword: inputValue.trim(), type: 'keyword' });
+      onGenerateReport({ keyword: inputValue.trim(), type: 'keyword', gscToken: gscToken || undefined });
     }
   };
 
   const handleDemo = () => {
     setInputValue('https://www.patagonia.com');
     setActiveTab('domain');
-    onGenerateReport({ domain: 'https://www.patagonia.com', type: 'domain' });
+    onGenerateReport({ domain: 'https://www.patagonia.com', type: 'domain', gscToken: gscToken || undefined });
+  };
+
+  const handleGSCConnect = async () => {
+    try {
+      const response = await fetch('/api/gsc/auth');
+      const data = await response.json();
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (error) {
+      console.error('GSC auth error:', error);
+    }
   };
 
   return (
@@ -77,6 +104,31 @@ export default function HeroSection({ onGenerateReport, isLoading }: HeroSection
         {/* Input Form */}
         <div className="max-w-2xl mx-auto">
           <Card className="p-8 shadow-xl">
+            {/* GSC Connection Status */}
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Link className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">Google Search Console</h4>
+                    <p className="text-sm text-blue-700">
+                      {gscToken ? 'Connected - Real GSC data will be included' : 'Connect for real traffic data and keywords'}
+                    </p>
+                  </div>
+                </div>
+                {!gscToken && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleGSCConnect}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  >
+                    Connect GSC
+                  </Button>
+                )}
+              </div>
+            </div>
+
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'domain' | 'keyword')} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="domain" className="flex items-center gap-2">

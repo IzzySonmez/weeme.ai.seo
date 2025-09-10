@@ -6,6 +6,7 @@ import { getPageSpeedInsights } from '@/lib/providers/pagespeed';
 import { searchSerp, getSiteIndexedPages } from '@/lib/providers/serp';
 import { getDomainRank } from '@/lib/providers/openpagerank';
 import { crawlPage, getSitemap } from '@/lib/providers/crawl';
+import { getGSCData } from '@/lib/providers/gsc';
 import { transformTechnicalSEO, transformOnPageSEO, transformSERPAnalysis } from '@/lib/seo/transform';
 import { generateKeywordOpportunities, generateGrowthPlan } from '@/lib/seo/recommend';
 
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { domain, keyword, type = 'domain' } = body;
+    const { domain, keyword, type = 'domain', gscToken } = body;
 
     if (!domain && !keyword) {
       return NextResponse.json(
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate new report
-    const report = await generateReport(domain, keyword, type);
+    const report = await generateReport(domain, keyword, type, gscToken);
     
     // Cache the result
     reportCache.set(cacheKey, report);
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateReport(domain: string, keyword: string, type: 'domain' | 'keyword'): Promise<Report> {
+async function generateReport(domain: string, keyword: string, type: 'domain' | 'keyword', gscToken?: string): Promise<Report> {
   const reportId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const targetUrl = domain.startsWith('http') ? domain : `https://${domain}`;
   const searchQuery = type === 'domain' ? domain : keyword;
@@ -69,13 +70,15 @@ async function generateReport(domain: string, keyword: string, type: 'domain' | 
     pageSpeedDesktop,
     serpData,
     crawlData,
-    domainRank
+    domainRank,
+    gscData
   ] = await Promise.allSettled([
     getPageSpeedInsights(targetUrl, 'mobile'),
     getPageSpeedInsights(targetUrl, 'desktop'),
     searchSerp(searchQuery),
     crawlPage(targetUrl),
-    getDomainRank(domain)
+    getDomainRank(domain),
+    gscToken ? getGSCData(domain, gscToken) : Promise.resolve(null)
   ]);
 
   // Step 2: Get additional data
@@ -123,7 +126,16 @@ async function generateReport(domain: string, keyword: string, type: 'domain' | 
     overview: {
       domainRank: domainRank.status === 'fulfilled' ? domainRank.value : null,
       indexedPages: indexedPages.status === 'fulfilled' ? indexedPages.value : null,
-      organicKeywords: Math.floor(Math.random() * 1000) + 500, // Estimate
+      organicKeywords: gscData.status === 'fulfilled' && gscData.value 
+        ? gscData.value.topKeywords.length 
+        : Math.floor(Math.random() * 1000) + 500,
+      gscData: gscData.status === 'fulfilled' && gscData.value ? {
+        totalClicks: gscData.value.totalClicks,
+        totalImpressions: gscData.value.totalImpressions,
+        averageCTR: gscData.value.averageCTR,
+        averagePosition: gscData.value.averagePosition,
+        topKeywords: gscData.value.topKeywords.slice(0, 10)
+      } : undefined,
       internationalization: {
         hreflang: crawlData.status === 'fulfilled' ? 
           crawlData.value?.hreflang.map(h => h.lang) || [] : [],
