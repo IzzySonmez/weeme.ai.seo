@@ -1,132 +1,91 @@
-"use client";
+'use client'
 
-import { useState } from 'react';
-import HeroSection from '@/components/hero-section';
-import ProgressIndicator from '@/components/progress-indicator';
-import ReportSection from '@/components/report-section';
-import ReportHeader from '@/components/report-header';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
-import { Report } from '@/lib/types/report';
+import { useState } from 'react'
+import UrlForm from '@/components/UrlForm'
+import ReportCard from '@/components/ReportCard'
+import ErrorAlert from '@/components/ErrorAlert'
+import Loading from '@/components/Loading'
 
-type AppState = 'input' | 'loading' | 'report' | 'error';
+interface AnalysisResult {
+  data: {
+    url: string
+    scores: {
+      performance: number
+      accessibility: number
+      best_practices: number
+      seo: number
+    }
+    audits: {
+      lcp?: number
+      cls?: number
+      tbt?: number
+    }
+    meta: {
+      title: string
+      description: string
+      h1: string
+    }
+    discoverability: {
+      robotsTxt: boolean
+      sitemapXml: boolean
+    }
+  }
+  suggestions: string[]
+}
 
 export default function Home() {
-  const [state, setState] = useState<AppState>('input');
-  const [report, setReport] = useState<Report | null>(null);
-  const [error, setError] = useState<string>('');
-  const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const progressSteps = [
-    'Collecting Data',
-    'Analyzing Performance', 
-    'Researching Competition',
-    'Generating Recommendations'
-  ];
-
-  const generateReport = async (data: { domain?: string; keyword?: string; type: 'domain' | 'keyword' }) => {
-    setState('loading');
-    setCurrentStep(1);
-    setError('');
+  const handleAnalyze = async (url: string) => {
+    setLoading(true)
+    setError(null)
+    setResult(null)
 
     try {
-      // Simulate progress steps
-      const stepDuration = 2000; // 2 seconds per step
-      
-      for (let step = 1; step <= progressSteps.length; step++) {
-        setCurrentStep(step);
-        
-        if (step < progressSteps.length) {
-          await new Promise(resolve => setTimeout(resolve, stepDuration));
-        }
-      }
-
-      const response = await fetch('/api/seo/report', {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
-      });
+        body: JSON.stringify({ url }),
+      })
+
+      const data = await response.json()
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate report');
+        throw new Error(data.error?.message || 'Analysis failed')
       }
 
-      const reportData = await response.json();
-      setReport(reportData);
-      setState('report');
-
+      setResult(data)
     } catch (err) {
-      console.error('Report generation failed:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      setState('error');
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
     }
-  };
-
-  const handleNewReport = () => {
-    setState('input');
-    setReport(null);
-    setError('');
-    setCurrentStep(1);
-  };
-
-  const handleExportPDF = () => {
-    window.print();
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {state === 'report' && (
-        <ReportHeader 
-          onNewReport={handleNewReport}
-          onExportPDF={handleExportPDF}
-        />
-      )}
-
-      {state === 'input' && (
-        <HeroSection 
-          onGenerateReport={generateReport}
-          isLoading={false}
-        />
-      )}
-
-      {state === 'loading' && (
-        <div className="container mx-auto px-4 py-16">
-          <ProgressIndicator 
-            currentStep={currentStep}
-            steps={progressSteps}
-          />
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            {process.env.NEXT_PUBLIC_APP_NAME || 'weeme.ai'}
+          </h1>
+          <p className="text-xl text-gray-600">
+            AI-powered SEO analysis and insights
+          </p>
         </div>
-      )}
 
-      {state === 'error' && (
-        <div className="container mx-auto px-4 py-16">
-          <div className="max-w-2xl mx-auto">
-            <Alert className="mb-6">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {error}
-              </AlertDescription>
-            </Alert>
-            <div className="text-center">
-              <button 
-                onClick={handleNewReport}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <UrlForm onSubmit={handleAnalyze} disabled={loading} />
         </div>
-      )}
 
-      {state === 'report' && report && (
-        <div className="pb-16">
-          <ReportSection report={report} />
-        </div>
-      )}
-    </div>
-  );
+        {loading && <Loading />}
+        {error && <ErrorAlert message={error} />}
+        {result && <ReportCard result={result} />}
+      </div>
+    </main>
+  )
 }
