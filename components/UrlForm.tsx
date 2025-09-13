@@ -2,7 +2,7 @@
 import { useState } from 'react';
 
 interface UrlFormProps {
-  onSubmit: (url: string) => void;
+  onSubmit: (url: string) => void;  // <= düzeltildi
   disabled?: boolean;
 }
 
